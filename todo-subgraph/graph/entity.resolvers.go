@@ -6,13 +6,27 @@ package graph
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"log/slog"
 	"todo-subgraph/graph/model"
 )
 
 // FindTodoByID is the resolver for the findTodoByID field.
 func (r *entityResolver) FindTodoByID(ctx context.Context, id string) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: FindTodoByID - findTodoByID"))
+	todo := model.Todo{
+		User: new(model.User),
+	}
+	err := r.Datastore.QueryRowContext(ctx, `
+		SELECT t.id, t.text_data, t.is_done, t.user_id FROM "todo" t
+		WHERE t.id = $1;`,
+		id,
+	).Scan(&todo.ID, &todo.Text, &todo.Done, &todo.User.ID)
+	if err != nil {
+		slog.Error("todo not found", slog.Any("error", err), slog.String("todoID", id))
+		return nil, errors.New("todo not found")
+	}
+
+	return &todo, nil
 }
 
 // Entity returns EntityResolver implementation.

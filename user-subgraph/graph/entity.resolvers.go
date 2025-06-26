@@ -6,13 +6,27 @@ package graph
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"log/slog"
 	"user-subgraph/graph/model"
+
+	"asap.local/sys-headers/userid"
 )
 
 // FindUserByID is the resolver for the findUserByID field.
 func (r *entityResolver) FindUserByID(ctx context.Context, id string) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: FindUserByID - findUserByID"))
+	var user model.User
+	err := r.Datastore.QueryRowContext(ctx, `
+		SELECT u.id, u.name, u.access_type FROM "user" u
+		WHERE u.id = $1;`,
+		id,
+	).Scan(&user.ID, &user.Name, &user.Type)
+	if err != nil {
+		slog.Error("user not found", slog.Any("error", err), slog.String("userID", userid.FromContext(ctx)))
+		return nil, errors.New("user not found")
+	}
+
+	return &user, nil
 }
 
 // Entity returns EntityResolver implementation.
