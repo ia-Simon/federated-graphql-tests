@@ -1,0 +1,28 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.3", 
+        import: ["@key", "@shareable"])
+
+enum UserType {
+  ADMIN
+  USER
+  GUEST
+}
+
+type User @key(fields: "id") {
+  id: ID!
+  name: String!
+  type: UserType!
+}
+
+type Query {
+  me: User!
+}
+
+input NewUser {
+  name: String!
+  type: UserType!
+}
+
+type Mutation {
+  createUser(input: NewUser!): User!
+}

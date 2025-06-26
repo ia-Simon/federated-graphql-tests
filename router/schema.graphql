@@ -1,0 +1,97 @@
+schema
+  @link(url: "https://specs.apollo.dev/link/v1.0")
+  @link(url: "https://specs.apollo.dev/join/v0.3", for: EXECUTION)
+{
+  query: Query
+  mutation: Mutation
+}
+
+directive @join__enumValue(graph: join__Graph!) repeatable on ENUM_VALUE
+
+directive @join__field(graph: join__Graph, requires: join__FieldSet, provides: join__FieldSet, type: String, external: Boolean, override: String, usedOverridden: Boolean) repeatable on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+
+directive @join__graph(name: String!, url: String!) on ENUM_VALUE
+
+directive @join__implements(graph: join__Graph!, interface: String!) repeatable on OBJECT | INTERFACE
+
+directive @join__type(graph: join__Graph!, key: join__FieldSet, extension: Boolean! = false, resolvable: Boolean! = true, isInterfaceObject: Boolean! = false) repeatable on OBJECT | INTERFACE | UNION | ENUM | INPUT_OBJECT | SCALAR
+
+directive @join__unionMember(graph: join__Graph!, member: String!) repeatable on UNION
+
+directive @link(url: String, as: String, for: link__Purpose, import: [link__Import]) repeatable on SCHEMA
+
+scalar join__FieldSet
+
+enum join__Graph {
+  TODO_SUBGRAPH @join__graph(name: "todo-subgraph", url: "http://localhost:4002/query")
+  USER_SUBGRAPH @join__graph(name: "user-subgraph", url: "http://localhost:4001/query")
+}
+
+scalar link__Import
+
+enum link__Purpose {
+  """
+  `SECURITY` features provide metadata necessary to securely resolve fields.
+  """
+  SECURITY
+
+  """
+  `EXECUTION` features provide metadata necessary for operation execution.
+  """
+  EXECUTION
+}
+
+type Mutation
+  @join__type(graph: TODO_SUBGRAPH)
+  @join__type(graph: USER_SUBGRAPH)
+{
+  createTodo(input: NewTodo!): Todo! @join__field(graph: TODO_SUBGRAPH)
+  createUser(input: NewUser!): User! @join__field(graph: USER_SUBGRAPH)
+}
+
+input NewTodo
+  @join__type(graph: TODO_SUBGRAPH)
+{
+  text: String!
+}
+
+input NewUser
+  @join__type(graph: USER_SUBGRAPH)
+{
+  name: String!
+  type: UserType!
+}
+
+type Query
+  @join__type(graph: TODO_SUBGRAPH)
+  @join__type(graph: USER_SUBGRAPH)
+{
+  myTodos: [Todo!]! @join__field(graph: TODO_SUBGRAPH)
+  me: User! @join__field(graph: USER_SUBGRAPH)
+}
+
+type Todo
+  @join__type(graph: TODO_SUBGRAPH)
+{
+  id: ID!
+  text: String!
+  done: Boolean!
+  user: User!
+}
+
+type User
+  @join__type(graph: TODO_SUBGRAPH, key: "id", resolvable: false)
+  @join__type(graph: USER_SUBGRAPH, key: "id")
+{
+  id: ID!
+  name: String! @join__field(graph: USER_SUBGRAPH)
+  type: UserType! @join__field(graph: USER_SUBGRAPH)
+}
+
+enum UserType
+  @join__type(graph: USER_SUBGRAPH)
+{
+  ADMIN @join__enumValue(graph: USER_SUBGRAPH)
+  USER @join__enumValue(graph: USER_SUBGRAPH)
+  GUEST @join__enumValue(graph: USER_SUBGRAPH)
+}

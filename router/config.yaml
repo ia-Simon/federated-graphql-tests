@@ -1,0 +1,10 @@
+# plugins:
+#   local.forward_headers:
+#     headers: 
+#       - "x-user-id"
+#       - "x-test-header"
+headers:
+  all:
+    request:
+      - propagate:
+          named: "X-User-ID"
