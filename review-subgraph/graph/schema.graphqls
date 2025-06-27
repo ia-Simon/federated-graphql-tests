@@ -1,0 +1,31 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.3", 
+        import: ["@key", "@shareable"])
+
+type Review @key(fields: "id") {
+  id: ID!
+  rating: Int!
+  comment: String!
+  product: Product!
+  user: User!
+}
+
+type Product @key(fields: "sku", resolvable: false) {
+  sku: ID!
+}
+
+type User @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+
+# type Query {}
+
+input NewReview {
+  rating: Int!
+  comment: String!
+  productSku: ID!
+}
+
+type Mutation {
+  createReview(input: NewReview!): Review!
+}
