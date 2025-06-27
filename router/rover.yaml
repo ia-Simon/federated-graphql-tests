@@ -6,3 +6,6 @@ subgraphs:
   todo-subgraph:
     schema:
       subgraph_url: http://localhost:4002/query
+  product-subgraph:
+    schema:
+      subgraph_url: http://localhost:4003/query
