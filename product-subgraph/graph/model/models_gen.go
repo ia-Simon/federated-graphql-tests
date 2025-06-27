@@ -12,13 +12,20 @@ type NewProduct struct {
 }
 
 type Product struct {
-	Sku         string `json:"sku"`
-	Name        string `json:"name"`
-	Price       int32  `json:"price"`
-	Description string `json:"description"`
+	Sku         string    `json:"sku"`
+	Name        string    `json:"name"`
+	Price       int32     `json:"price"`
+	Description string    `json:"description"`
+	Reviews     []*Review `json:"reviews"`
 }
 
 func (Product) IsEntity() {}
 
 type Query struct {
 }
+
+type Review struct {
+	ID string `json:"id"`
+}
+
+func (Review) IsEntity() {}

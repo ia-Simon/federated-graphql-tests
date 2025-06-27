@@ -40,6 +40,35 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewPro
 	return newProduct, nil
 }
 
+// Reviews is the resolver for the reviews field.
+func (r *productResolver) Reviews(ctx context.Context, obj *model.Product) ([]*model.Review, error) {
+	rows, err := r.Datastore.QueryContext(ctx, `
+		SELECT r.id FROM "review" r
+		WHERE r.product_sku = $1;`,
+		obj.Sku,
+	)
+	if err != nil {
+		slog.Error("failed to retrieve product reviews", slog.Any("error", err), slog.String("productSku", obj.Sku))
+		return nil, errors.New("failed to retrieve product reviews")
+	}
+
+	var reviews []*model.Review
+	for rows.Next() {
+		review := new(model.Review)
+		err := rows.Scan(&review.ID)
+		if err != nil {
+			slog.Warn("failed to scan row from result", slog.Any("error", err))
+			continue
+		}
+		reviews = append(reviews, review)
+	}
+	if err = rows.Err(); err != nil {
+		slog.Warn("rows iteration finished with error", slog.Any("error", err))
+	}
+
+	return reviews, nil
+}
+
 // Products is the resolver for the products field.
 func (r *queryResolver) Products(ctx context.Context) ([]*model.Product, error) {
 	rows, err := r.Datastore.QueryContext(ctx, `
@@ -71,8 +100,12 @@ func (r *queryResolver) Products(ctx context.Context) ([]*model.Product, error) 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
+// Product returns ProductResolver implementation.
+func (r *Resolver) Product() ProductResolver { return &productResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
+type productResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

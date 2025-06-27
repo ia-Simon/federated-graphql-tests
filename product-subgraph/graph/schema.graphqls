@@ -7,6 +7,11 @@ type Product @key(fields: "sku") {
   name: String!
   price: Int! # Product price in cents
   description: String!
+  reviews: [Review!]!
+}
+
+type Review @key(fields: "id", resolvable: false) {
+  id: ID!
 }
 
 type Query {
