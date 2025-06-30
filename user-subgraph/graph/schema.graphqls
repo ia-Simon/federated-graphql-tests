@@ -10,15 +10,28 @@ enum UserType {
 
 type User @key(fields: "id") {
   id: ID!
+  username: String!
   name: String!
   type: UserType!
 }
 
+input LoginInput {
+  username: String!
+  password: String!
+}
+
+type LoginOutput {
+  accessToken: String!
+}
+
 type Query {
   me: User!
+  login(input: LoginInput!): LoginOutput!
 }
 
 input NewUser {
+  username: String!
+  password: String!
   name: String!
   type: UserType!
 }

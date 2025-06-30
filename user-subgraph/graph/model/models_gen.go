@@ -9,21 +9,33 @@ import (
 	"strconv"
 )
 
+type LoginInput struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginOutput struct {
+	AccessToken string `json:"accessToken"`
+}
+
 type Mutation struct {
 }
 
 type NewUser struct {
-	Name string   `json:"name"`
-	Type UserType `json:"type"`
+	Username string   `json:"username"`
+	Password string   `json:"password"`
+	Name     string   `json:"name"`
+	Type     UserType `json:"type"`
 }
 
 type Query struct {
 }
 
 type User struct {
-	ID   string   `json:"id"`
-	Name string   `json:"name"`
-	Type UserType `json:"type"`
+	ID       string   `json:"id"`
+	Username string   `json:"username"`
+	Name     string   `json:"name"`
+	Type     UserType `json:"type"`
 }
 
 func (User) IsEntity() {}

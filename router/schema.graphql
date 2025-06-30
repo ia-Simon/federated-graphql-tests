@@ -43,6 +43,19 @@ enum link__Purpose {
   EXECUTION
 }
 
+input LoginInput
+  @join__type(graph: USER_SUBGRAPH)
+{
+  username: String!
+  password: String!
+}
+
+type LoginOutput
+  @join__type(graph: USER_SUBGRAPH)
+{
+  accessToken: String!
+}
+
 type Mutation
   @join__type(graph: PRODUCT_SUBGRAPH)
   @join__type(graph: REVIEW_SUBGRAPH)
@@ -80,6 +93,8 @@ input NewTodo
 input NewUser
   @join__type(graph: USER_SUBGRAPH)
 {
+  username: String!
+  password: String!
   name: String!
   type: UserType!
 }
@@ -92,6 +107,7 @@ type Product
   name: String! @join__field(graph: PRODUCT_SUBGRAPH)
   price: Int! @join__field(graph: PRODUCT_SUBGRAPH)
   description: String! @join__field(graph: PRODUCT_SUBGRAPH)
+  reviews: [Review!]! @join__field(graph: PRODUCT_SUBGRAPH)
 }
 
 type Query
@@ -103,16 +119,18 @@ type Query
   products: [Product!]! @join__field(graph: PRODUCT_SUBGRAPH)
   myTodos: [Todo!]! @join__field(graph: TODO_SUBGRAPH)
   me: User! @join__field(graph: USER_SUBGRAPH)
+  login(input: LoginInput!): LoginOutput! @join__field(graph: USER_SUBGRAPH)
 }
 
 type Review
+  @join__type(graph: PRODUCT_SUBGRAPH, key: "id", resolvable: false)
   @join__type(graph: REVIEW_SUBGRAPH, key: "id")
 {
   id: ID!
-  rating: Int!
-  comment: String!
-  product: Product!
-  user: User!
+  rating: Int! @join__field(graph: REVIEW_SUBGRAPH)
+  comment: String! @join__field(graph: REVIEW_SUBGRAPH)
+  product: Product! @join__field(graph: REVIEW_SUBGRAPH)
+  user: User! @join__field(graph: REVIEW_SUBGRAPH)
 }
 
 type Todo
@@ -130,6 +148,7 @@ type User
   @join__type(graph: USER_SUBGRAPH, key: "id")
 {
   id: ID!
+  username: String! @join__field(graph: USER_SUBGRAPH)
   name: String! @join__field(graph: USER_SUBGRAPH)
   type: UserType! @join__field(graph: USER_SUBGRAPH)
 }

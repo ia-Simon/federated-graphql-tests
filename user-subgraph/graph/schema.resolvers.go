@@ -6,27 +6,39 @@ package graph
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"log/slog"
+	"runtime"
+	"strings"
 	"user-subgraph/graph/model"
 
 	"asap.local/sys-headers/userid"
-
 	"github.com/google/uuid"
+	"golang.org/x/crypto/argon2"
 )
+
+const passwordSeparator = "$$"
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
 	newUser := &model.User{
-		ID:   uuid.NewString(),
-		Name: input.Name,
-		Type: input.Type,
+		ID:       uuid.NewString(),
+		Username: input.Username,
+		Name:     input.Name,
+		Type:     input.Type,
 	}
 
+	salt := make([]byte, 16)
+	rand.Read(salt)
+	passwordKey := argon2.IDKey([]byte(input.Password), salt, 1, 64*1024, uint8(runtime.NumCPU()), 32)
+	hashedPassword := hex.EncodeToString(salt) + passwordSeparator + hex.EncodeToString(passwordKey)
+
 	_, err := r.Datastore.ExecContext(ctx, `
-		INSERT INTO "user" ("id", "name", "access_type") 
-		VALUES ($1, $2, $3);`,
-		newUser.ID, newUser.Name, newUser.Type,
+		INSERT INTO "user" ("id", "username", "password", "name", "access_type") 
+		VALUES ($1, $2, $3, $4, $5);`,
+		newUser.ID, newUser.Username, hashedPassword, newUser.Name, newUser.Type,
 	)
 	if err != nil {
 		slog.Error("failed to persist new user", slog.Any("error", err))
@@ -40,16 +52,59 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	var self model.User
 	err := r.Datastore.QueryRowContext(ctx, `
-		SELECT u.id, u.name, u.access_type FROM "user" u
+		SELECT u.id, u.username, u.name, u.access_type FROM "user" u
 		WHERE u.id = $1;`,
 		userid.FromContext(ctx),
-	).Scan(&self.ID, &self.Name, &self.Type)
+	).Scan(&self.ID, &self.Username, &self.Name, &self.Type)
 	if err != nil {
 		slog.Error("self not found", slog.Any("error", err), slog.String("userID", userid.FromContext(ctx)))
 		return nil, errors.New("self not found")
 	}
 
 	return &self, nil
+}
+
+// Login is the resolver for the login field.
+func (r *queryResolver) Login(ctx context.Context, input model.LoginInput) (out *model.LoginOutput, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.New("username or password incorrect")
+		}
+	}()
+
+	var self model.User
+	var hashedPassword string
+	err = r.Datastore.QueryRowContext(ctx, `
+		SELECT u.id, u.username, u.password, u.name, u.access_type FROM "user" u
+		WHERE u.username = $1;`,
+		input.Username,
+	).Scan(&self.ID, &self.Username, &hashedPassword, &self.Name, &self.Type)
+	if err != nil {
+		slog.Error("user not found", slog.Any("error", err), slog.String("username", input.Username))
+		return nil, err
+	}
+
+	var split []string
+	if split = strings.SplitN(hashedPassword, passwordSeparator, 2); len(split) != 2 {
+		slog.Error("invalid hashedPassword split", slog.String("hashedPassword", hashedPassword))
+		return nil, errors.New("invalid hashedPassword")
+	}
+
+	salt, err := hex.DecodeString(split[0])
+	if err != nil {
+		slog.Error("invalid salt", slog.Any("error", err), slog.String("split[0]/salt", split[0]))
+		return nil, err
+	}
+
+	passwordKey, err := hex.DecodeString(split[1])
+	if err != nil {
+		slog.Error("invalid passwordKey", slog.Any("error", err), slog.String("split[1]/passwordKey", split[1]))
+		return nil, err
+	}
+
+	loginPasswordKey := argon2.IDKey([]byte(input.Password), salt, 1, 64*1024, uint8(runtime.NumCPU()), 32)
+
+	//TODO: check https://pkg.go.dev/github.com/andskur/argon2-hashing#section-sourcefiles
 }
 
 // Mutation returns MutationResolver implementation.
